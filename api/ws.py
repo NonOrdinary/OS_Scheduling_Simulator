@@ -84,7 +84,7 @@ async def websocket_endpoint(websocket: WebSocket):
             # We iterate through the timeline ans stream the events
             for pid, start_time, end_time in sim.timeline:
                 
-                # Send the data over websocket, pause until kern
+                # Send the data over websocket, pause until OS buffer is full
                 await manager.send_json({
                     "event": "start", 
                     "pid": pid, 
