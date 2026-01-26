@@ -1,6 +1,7 @@
 # api/models.py
 from pydantic import BaseModel
 
+#enforcing the structure of data type of Job
 class JobRequest(BaseModel):
     pid: int
     arrival_time: int

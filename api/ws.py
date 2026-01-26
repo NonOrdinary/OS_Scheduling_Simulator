@@ -10,15 +10,17 @@ from scheduler.simulator import Simulator
 router = APIRouter()
 
 class ConnectionManager:
+    # here we save all active ws connection to a server to a list to manage each individual connected
     def __init__(self):
         self.active_connections: List[WebSocket] = []
 
+    # This is where the standard HTTP connection of a user gets upgraded to Websocket connection,also we add it to the list
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        # required to disconnect the websocket connection to closed client
+        # required to disconnect the websocket connection to closed client (user closed the tab)
         self.active_connections.remove(websocket)
 
     async def send_json(self, message: dict, websocket: WebSocket):
@@ -27,7 +29,7 @@ class ConnectionManager:
 
     async def broadcast(self, message: dict):
         # as name suggest , broadcast message to all, but no use here
-        # but i think it good to have in my project
+        # but i think it good to have in my project just for usage purpose of ws
         for connection in self.active_connections:
             await connection.send_json(message)
 
@@ -52,10 +54,12 @@ async def websocket_endpoint(websocket: WebSocket):
       - { "event": "finish", "pid": X, "time": t }
       - { "event": "metrics", ... }
     """
-    await manager.connect(websocket) # connect to the client that sent request to , the handshake 
+    await manager.connect(websocket) # pause the client connect to the client that sent request to , the TCP handshake 
     try:
+        # why did i add a loop here, to obviously be able to add events in between 
+        # because i had a problem of static jobs, once done, i needed to refresh the server
         while True:
-            #  Wait for a "Simulate" command (blocks here until you click the button)
+            #  pause for a "Simulate" command (doesn't block CPU , but pause this coroutine here until you click the button)
             data = await websocket.receive_json()
             
             jobs_data = data.get("jobs", [])
@@ -76,10 +80,11 @@ async def websocket_endpoint(websocket: WebSocket):
             #  Run Math (Logic Layer)
             sim.run()
 
-            #  Stream Animation (Visualization Layer)
-            # We iterate through the timeline we fixed in step 1
+            #  Stream Animation (Visualization Layer) 
+            # We iterate through the timeline ans stream the events
             for pid, start_time, end_time in sim.timeline:
                 
+                # Send the data over websocket, pause until kern
                 await manager.send_json({
                     "event": "start", 
                     "pid": pid, 
@@ -89,6 +94,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 duration = end_time - start_time
                 
                 # Speed control: 0.5s real time = 1 unit simulation time
+                # pauses the function for 0.5s
                 await asyncio.sleep(duration * 0.5)
 
                 await manager.send_json({
@@ -99,7 +105,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # Send Final Score
             metrics = sim.get_metrics()
-            await manager.send_json({"event": "metrics","algorithm": algo, **metrics}, websocket)
+            await manager.send_json({"event": "metrics","algorithm": algo, **metrics}, websocket) # pause until OS buffers aren't full
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

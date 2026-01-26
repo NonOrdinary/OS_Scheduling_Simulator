@@ -1,5 +1,9 @@
 # api/routes.py
+# This module is actually for submitting to the API and not the websocket for simulations
+# to directly fetch metrics using computational power of the Computer system
+# This is of NO USE as the button is disable for now
 
+# http://localhost:8000/docs  Check this out, very cool automatic documentation
 from fastapi import APIRouter, HTTPException, Query
 from typing import List
 
@@ -11,6 +15,12 @@ router = APIRouter()
 
 # In‑memory store of submitted jobs
 jobs: List[Process] = [] #type hint , enforcing the data that would be in job(list of processes)
+
+
+
+# Method,Endpoint Logic,Full URL
+# POST,Submit a Job,http://localhost:8000/jobs
+# GET,Get Metrics,http://localhost:8000/metrics?algo=rr&quantum=2
 
 
 @router.post("/jobs", status_code=201)  # status tellls that it has successfully created resources
@@ -30,7 +40,7 @@ def submit_job(job: JobRequest):
 
 @router.get("/metrics", response_model=MetricsResponse)
 def get_metrics(
-    #the query thing tells server to look for algo(configuration) in HTTP request URL and not json body
+    # the query thing tells server to look for algo(configuration) in HTTP request URL and not json body
     # description is just there for the documentation thingy
     algo: str = Query("fcfs", description="Scheduling algorithm: 'fcfs' or 'rr'"),
     quantum: int = Query(2, gt=0, description="Time quantum for Round Robin")

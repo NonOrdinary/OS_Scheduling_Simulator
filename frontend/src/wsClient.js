@@ -5,13 +5,13 @@
  * onMessage: callback invoked with parsed JSON for each message.
  */
 export function createWebSocket(onMessage) {
-  const ws = new WebSocket("ws://127.0.0.1:8000/ws");
+  const ws = new WebSocket("ws://127.0.0.1:8000/ws"); // TCP handshake to backend and also upgrading to ws
 
   ws.onopen = () => console.log("WebSocket connected");
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      onMessage(data);
+      onMessage(data); // this is provided by Dashboard.js
     } catch (err) {
       console.error("Failed to parse WS message:", err);
     }
